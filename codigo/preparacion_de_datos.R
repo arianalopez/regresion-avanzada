@@ -1,8 +1,6 @@
 
 rm(list =ls())
 
-install.packages("reshape")
-
 library(dplyr)
 library(lubridate)
 library(viridis)
@@ -15,8 +13,12 @@ library(reshape)
 library(rgeos)
 library(readr)
 
-setwd("/home/stuka/MexEval/data/")
-dir()
+
+setwd("/home/denny/itam/modelos_lgeneralizados/ago_2016/proyecto_final")
+setwd("/home/stuka/RegresionAvanzada/ProyFin/Aquisetrabaja/regresion-avanzada/")
+
+##### Esto solo corre en la laptop de Stephane - NO CORRER
+#setwd("/home/stuka/MexEval/data/")
 mexdel = readOGR(dsn = ".","homicidios_join_agebs", encoding = "utf-8") %>% spTransform(CRS("+proj=longlat +datum=WGS84"))
 head(mexdel@data)
 homi <- mexdel@data %>% select(CVEGEO,modalidad,anio) %>% group_by(CVEGEO,modalidad,anio) %>% summarize(homi_count = n())
@@ -25,9 +27,6 @@ glimpse(homi)
 for(i in 1:ncol(homi)){
   homi[[i]] <- as.character(homi[[i]])
 }
-
-
-
 
 agebs = readOGR(dsn = ".","AGEBS_DF_Centroids", encoding = "utf-8") %>% spTransform(CRS("+proj=longlat +datum=WGS84"))
 agebs_code <- as.character(unique(agebs@data$CVEGEO))
@@ -77,10 +76,11 @@ summary(raw_data_final)
 for(i in 1:3){
   raw_data_final[[i]] <- factor(raw_data_final[[i]])
 }
-write_csv(raw_data_final,"/home/stuka/RegresionAvanzada/ProyFin/raw_data.csv")
+write_csv(raw_data_final,"./datos/raw_data.csv")
 
+######################## A partir de aqui si correr
 
-
+raw_data_final <- read_csv("./datos/raw_data.csv")
 #### Tabla 4 años
 tabla_4anios <- raw_data_final %>% select(CVEGEO,homi_count.y) %>% group_by(CVEGEO) %>% summarise(homi_count = sum(homi_count.y))
 tabla_4anios$CVEGEO <- as.character(tabla_4anios$CVEGEO)
@@ -94,17 +94,21 @@ t <- table(tabla_4anios$homi_count)
 quantile(tabla_4anios$homi_count,seq(0,1,0.05))
 ?quantile
 100*table(tabla_4anios$homi_count)/nrow(tabla_4anios)
-
+write_csv(tabla_4anios,"./datos/tabla_4anios.csv")
 
 ###################################################################################
 library(dplyr)
 
 
 setwd("/home/denny/itam/modelos_lgeneralizados/ago_2016/proyecto_final")
-tabla_4anios <- read.table("tabla_4_anios.csv", sep=",", header=T,stringsAsFactors = FALSE) #REALMENTE ESTA TABLA NO AGREGA LOS 4 ANIOS
+setwd("/home/stuka/RegresionAvanzada/ProyFin/Aquisetrabaja/regresion-avanzada/")
+
+tabla_4anios <- read.table("./datos/tabla_4_anios.csv", sep=",", header=T,stringsAsFactors = FALSE) #REALMENTE ESTA TABLA NO AGREGA LOS 4 ANIOS
 
 length(unique(tabla_4anios$CVEGEO)) #2,411 agebs
 
+################ Visualización rapida
+qplot(var_eco$POBTOT)
 
 #CREO UNA TABLA PARA LAS VARIABLES ECONOMICAS NIVEL AGEB
 var_eco <- tabla_4anios %>% 
@@ -114,6 +118,14 @@ var_eco <- tabla_4anios %>%
 
 length(unique(var_eco$CVEGEO)) #comprobamos que seguimos con 2,411 agebs
 
+write_csv(tabla_4anios_ok,"./datos/tabla_4anios_naive.csv")
+
+ybarra <- mean(tabla_4anios_ok$homi_count)
+lambda <- ybarra
+simul <- rpois(4000,lambda)
+hist(tabla_4anios_ok$homi_count,prob=TRUE,breaks=40,ylim=c(0,1),xlab="Conteo de homicidios",main=strwrap("Histograma de homicidios por AGEB vs densidad Poisson",50))
+lines(density(simul),col="red",lty=2)
+legend("topright", c("Histograma",paste0("Densidad Poisson (lambda=",format(lambda,digits=2),")")),lty=c(1,2), col = c("black","red"))
 
 #CREO LA TABLA QUE AGREGA LOS 4 ANIOS
 unique(tabla_4anios$anio) #tenemos que agregar los 4 anios
@@ -163,6 +175,26 @@ a$prom_homi <- a$homi_count / 4
 #TABLA PARA EL 2DO MODELO AGRUPANDO LOS 4 ANIOS, PERO SEPARANDO POR 3 MODALIDADES
 tabla_4anios_mod <- left_join(a,var_eco,by=c("CVEGEO"="CVEGEO"))
 head(tabla_4anios_mod,10)
+
+write_csv(tabla_4anios_mod,"./datos/tabla_4anios_mods.csv")
+############################ Visualización y tablas de summary
+plot(density(tabla_4anios_mod$homi_count))
+
+with(tabla_4anios_mod, tapply(homi_count, modalidad, function(x) {
+  sprintf("Media (Desviación estándar) = %1.2f (%1.2f)", mean(x), sd(x))
+}))
+ggplot(tabla_4anios_mod, aes(homi_count, fill = modalidad)) +
+  geom_histogram(binwidth=1, position="dodge")
+
+#### Obtención de la PMF
+as_data_frame(prop.table(table(tabla_4anios_mod$homi_count)))
+plot(as_data_frame(prop.table(table(tabla_4anios_mod$homi_count))),type="p")
+
+#####################3 Pruebas modelos glm frecuentistas
+summary(m1 <- glm(homi_count ~ modalidad, family="poisson", data=tabla_4anios_mod))
+
+summary(m1 <- glm(homi_count ~ modalidad + INDICE_GLOBAL, family="poisson", data=tabla_4anios_mod))
+
 
 
 #CREAMOS TABLA PARA 3ER MODELO
@@ -214,6 +246,19 @@ for(i in 1:nrow(b)){
 
 tabla_2014_2015_mod <- left_join(b,var_eco, by=("CVEGEO"="CVEGEO")) #TABLA PARA MODELO DE INTERACCIONES
 head(tabla_2014_2015_mod,20)
+
+write_csv(tabla_2014_2015_mod,"./datos/tabla_2014_2015_mod.csv")
+
+############################### Visualizar datos
+ggplot(tabla_2014_2015_mod, aes(homi_count, fill = modalidad)) +
+  geom_histogram(binwidth=1, position="dodge") + 
+  facet_grid(. ~ anio)
+
+summary(m1 <- glm(homi_count ~ modalidad + bin_2015, family="poisson", data=tabla_2014_2015_mod))
+summary(m1 <- glm(homi_count ~ modalidad + bin_2015 + INDICE_GLOBAL, family="poisson", data=tabla_2014_2015_mod))
+
+
+
 
 
 
