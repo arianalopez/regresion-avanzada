@@ -7,6 +7,7 @@ setwd(wdir)
 library(R2OpenBUGS)
 library(dplyr)
 library(readr)
+library(R2jags)
 #--- Funciones utiles ---
 prob<-function(x){
   out<-min(length(x[x>0])/length(x),length(x[x<0])/length(x))
@@ -95,13 +96,20 @@ m1_poisson_lin.sim<-bugs(data,inits,parameters,model.file="m1_poisson_lineal.txt
 #RESPUESTAS MODELO 1 POISSON LIGA LOG
 #OpenBUGS
 out_m1_poisson_log.sim<-m1_poisson_log.sim$sims.list
+#############################################################################################
+#Inicio del analisis Bayesiano
+
+# Con 5000 iteraciones las cadenas no se mezclan bien :(
+traceplot(m1_poisson_log.sim)
 
 #Resumen (estimadores)
 #OpenBUGS
 out.sum_m1_poisson_log.sim<-m1_poisson_log.sim$summary
 print(out.sum_m1_poisson_log.sim)
+################## Claramente los coeficientes Betas son significativos! Y el ser negativos habla de que hay menos homicidios en zonas donde hay mas proporción de viviendas con internet 
 head(out.sum_m1_poisson_log.sim)
-
+####### 
+exp(-1.2252)
 #DIC
 m1_poisson_log.dic<-m1_poisson_log.sim$DIC
 print(m1_poisson_log.dic) #8295

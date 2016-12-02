@@ -107,8 +107,7 @@ tabla_4anios <- read.table("./datos/tabla_4_anios.csv", sep=",", header=T,string
 
 length(unique(tabla_4anios$CVEGEO)) #2,411 agebs
 
-################ Visualización rapida
-qplot(var_eco$POBTOT)
+
 
 #CREO UNA TABLA PARA LAS VARIABLES ECONOMICAS NIVEL AGEB
 var_eco <- tabla_4anios %>% 
@@ -118,14 +117,6 @@ var_eco <- tabla_4anios %>%
 
 length(unique(var_eco$CVEGEO)) #comprobamos que seguimos con 2,411 agebs
 
-write_csv(tabla_4anios_ok,"./datos/tabla_4anios_naive.csv")
-
-ybarra <- mean(tabla_4anios_ok$homi_count)
-lambda <- ybarra
-simul <- rpois(4000,lambda)
-hist(tabla_4anios_ok$homi_count,prob=TRUE,breaks=40,ylim=c(0,1),xlab="Conteo de homicidios",main=strwrap("Histograma de homicidios por AGEB vs densidad Poisson",50))
-lines(density(simul),col="red",lty=2)
-legend("topright", c("Histograma",paste0("Densidad Poisson (lambda=",format(lambda,digits=2),")")),lty=c(1,2), col = c("black","red"))
 
 #CREO LA TABLA QUE AGREGA LOS 4 ANIOS
 unique(tabla_4anios$anio) #tenemos que agregar los 4 anios
@@ -136,6 +127,16 @@ tabla_4anios_ok$prom_homi <- tabla_4anios_ok$homi_count / 4
 
 tabla_4anios_ok <- left_join(tabla_4anios_ok,var_eco,by=c("CVEGEO"="CVEGEO")) #TABLA PARA EL PRIMER MODELO NAIVE
 head(tabla_4anios_ok,20)
+write_csv(tabla_4anios_ok,"./datos/tabla_4anios_naive.csv")
+################ Visualización rapida
+qplot(var_eco$POBTOT)
+
+ybarra <- mean(tabla_4anios_ok$homi_count)
+lambda <- ybarra
+simul <- rpois(4000,lambda)
+hist(tabla_4anios_ok$homi_count,prob=TRUE,breaks=40,ylim=c(0,1),xlab="Conteo de homicidios",main=strwrap("Histograma de homicidios por AGEB vs densidad Poisson",50))
+lines(density(simul),col="red",lty=2)
+legend("topright", c("Histograma",paste0("Densidad Poisson (lambda=",format(lambda,digits=4),")")),lty=c(1,2), col = c("black","red"))
 
 
 #VAMOS A CREAR LA SEGUNDA TABLA DONDE AGRUPAMOS LOS 4 ANIOS PERO SEPARAMOS POR MODALIDAD DE ARMA BLANCA, ARMA DE FUEGO Y OTROS
