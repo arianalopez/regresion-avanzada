@@ -85,7 +85,7 @@ parameters<-c("beta","ypred")
 
 #-Running code-
 #OpenBUGS
-m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="m1_poisson_log.txt",
+m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="./codigo/m1_poisson_log.txt",
                n.iter=20000,n.chains=1,n.burnin=2000)
 
 m1_poisson_lin.sim<-bugs(data,inits,parameters,model.file="m1_poisson_lineal.txt",
