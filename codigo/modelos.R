@@ -120,7 +120,45 @@ exp(-1.2252)
 
 #DIC
 m1_poisson_log.dic<-m1_poisson_log.sim$DIC
-print(m1_poisson_log.dic) #8295
+print(m1_poisson_log.dic) #8.4e+11
+
+######################## Analisis MCMC para beta1
+z<-out_m1_poisson_log.sim$beta[,1]
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+
+############## p-value
+prob(z)
+
+######################## Analisis MCMC para beta2
+z<-out_m1_poisson_log.sim$beta[,2]
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+############### p-value
+prob(z)
+
+########################################## Predictions
+#Predictions
+out.ypred<-out.sum_m1_poisson_log.sim[grep("ypred",rownames(out.sum_m1_poisson_log.sim)),]
+or<-order(datos$POR_VPH_INTER)
+ymin<-min(datos$homi_count,out.ypred[,c(1,3,7)])
+ymax<-max(datos$homi_count,out.ypred[,c(1,3,7)])
+par(mfrow=c(1,1))
+plot(datos$POR_VPH_INTER,datos$homi_count,ylim=c(ymin,ymax))
+lines(datos$POR_VPH_INTER[or],out.ypred[or,1],lwd=2,col=2)
+lines(datos$POR_VPH_INTER[or],out.ypred[or,3],lty=2,col=2)
+lines(datos$POR_VPH_INTER[or],out.ypred[or,7],lty=2,col=2)
+
+
+##########################################################################################
+# Hasta aqui mis avances - falta la pseudo-R
+
 
 
 
