@@ -6,7 +6,7 @@ setwd(wdir)
 
 library(R2OpenBUGS)
 library(dplyr)
-
+library(readr)
 #--- Funciones utiles ---
 prob<-function(x){
   out<-min(length(x[x>0])/length(x),length(x[x<0])/length(x))
