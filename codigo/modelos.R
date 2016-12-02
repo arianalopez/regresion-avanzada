@@ -1,9 +1,11 @@
 #-Working directory-
+
 wdir<-"/home/denny/itam/modelos_lgeneralizados/ago_2016/proyecto_final"
+wdir<-"/home/stuka/RegresionAvanzada/ProyFin/Aquisetrabaja/regresion-avanzada/"
 setwd(wdir)
 
 library(R2OpenBUGS)
-
+library(dplyr)
 
 #--- Funciones utiles ---
 prob<-function(x){
@@ -11,7 +13,7 @@ prob<-function(x){
   out
 }
 
-
+tabla_4anios_ok <- read_csv("./datos/tabla_4anios_naive.csv")
 #MODELO NAIVE
 n <- nrow(tabla_4anios_ok)*1
 hist(tabla_4anios_ok$homi_count,breaks = 30)
@@ -52,19 +54,19 @@ cor(subdata1)
 
 #Transformamos las variables explicativas en %
 
-POR_P_18YMAS <- tabla_4anios_ok$P_18YMAS/tabla_4anios_ok$POBTOT
-POR_P18YM_PB <- tabla_4anios_ok$P18YM_PB/tabla_4anios_ok$POBTOT
-POR_VPH_PISODT <- tabla_4anios_ok$VPH_PISODT/tabla_4anios_ok$VIVPAR_HAB
-POR_VPH_TV <- tabla_4anios_ok$VPH_TV/tabla_4anios_ok$VIVPAR_HAB
-POR_VPH_AUTOM <- tabla_4anios_ok$VPH_AUTOM/tabla_4anios_ok$VIVPAR_HAB
-POR_VPH_PC <- tabla_4anios_ok$VPH_PC/tabla_4anios_ok$VIVPAR_HAB
-POR_VPH_INTER <- tabla_4anios_ok$VPH_INTER/tabla_4anios_ok$VIVPAR_HAB
-GRAPROES_1 <- tabla_4anios_ok$GRAPROES
+tabla_4anios_ok$POR_P_18YMAS <- tabla_4anios_ok$P_18YMAS/tabla_4anios_ok$POBTOT
+tabla_4anios_ok$POR_P18YM_PB <- tabla_4anios_ok$P18YM_PB/tabla_4anios_ok$POBTOT
+tabla_4anios_ok$POR_VPH_PISODT <- tabla_4anios_ok$VPH_PISODT/tabla_4anios_ok$VIVPAR_HAB
+tabla_4anios_ok$POR_VPH_TV <- tabla_4anios_ok$VPH_TV/tabla_4anios_ok$VIVPAR_HAB
+tabla_4anios_ok$POR_VPH_AUTOM <- tabla_4anios_ok$VPH_AUTOM/tabla_4anios_ok$VIVPAR_HAB
+tabla_4anios_ok$POR_VPH_PC <- tabla_4anios_ok$VPH_PC/tabla_4anios_ok$VIVPAR_HAB
+tabla_4anios_ok$POR_VPH_INTER <- tabla_4anios_ok$VPH_INTER/tabla_4anios_ok$VIVPAR_HAB
+tabla_4anios_ok$GRAPROES_1 <- tabla_4anios_ok$GRAPROES
 
 #-Defining data-
 
 #poisson y bin neg
-data<-list("n"=n,"y"=tabla_4anios_ok$homi_count,"x"=tabla_4anios_ok$INDICE_GLOBAL)
+data<-list("n"=n,"y"=tabla_4anios_ok$homi_count,"x"=tabla_4anios_ok$POR_VPH_INTER)
 
 #binomial
 data<-list("n"=n,"ne"=tabla_4anios_ok$POBTOT,"y"=tabla_4anios_ok$prom_homi,"x"=tabla_4anios_ok$INDICE_GLOBAL)
