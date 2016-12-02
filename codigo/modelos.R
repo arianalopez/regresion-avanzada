@@ -64,15 +64,21 @@ tabla_4anios_ok$POR_VPH_PC <- ifelse(tabla_4anios_ok$VIVPAR_HAB==0,0,tabla_4anio
 tabla_4anios_ok$POR_VPH_INTER <- ifelse(tabla_4anios_ok$VIVPAR_HAB==0,0,tabla_4anios_ok$VPH_INTER/tabla_4anios_ok$VIVPAR_HAB)
 tabla_4anios_ok$GRAPROES_1 <- tabla_4anios_ok$GRAPROES
 
+par(mfrow=c(1,3))
+plot(tabla_4anios_ok$homi_count,tabla_4anios_ok$POR_VPH_INTER,pch=19)
+plot(tabla_4anios_ok$homi_count,tabla_4anios_ok$GRAPROES_1,pch=19)
+plot(tabla_4anios_ok$homi_count,tabla_4anios_ok$PROM_OCUP,pch=19)
+
+cor(tabla_4anios_ok[,c("POR_VPH_INTER","GRAPROES_1","PROM_OCUP")])
 #################################### PRIMER MODELO homi ~ Po(POR_VPH_INTER,beta)
 ########################### Esta tecnica para seleccionar variables permite que el codigo despues se ppueda automatizar
 tabla <- tabla_4anios_ok
-variables <- c("homi_count","POBTOT","GRAPROES","POR_VPH_INTER")
+variables <- c("homi_count","POBTOT","PROM_OCUP","GRAPROES","POR_VPH_INTER")
 datos <- tabla %>% select(one_of(variables))
 #-Defining data-
 n <- nrow(datos)*1
 #poisson y bin neg - exposure es el offset de POP_TOT
-data<-list("n"=n,"y"=datos[[1]],"exposure"=datos[[2]],"x"=datos[[4]])
+data<-list("n"=n,"y"=datos[[1]],"exposure"=datos[[2]],"x"=datos[[5]])
 
 #binomial
 #data<-list("n"=n,"ne"=tabla_4anios_ok$POBTOT,"y"=tabla_4anios_ok$prom_homi,"x"=tabla_4anios_ok$INDICE_GLOBAL)
@@ -108,8 +114,10 @@ out.sum_m1_poisson_log.sim<-m1_poisson_log.sim$summary
 print(out.sum_m1_poisson_log.sim)
 ################## Claramente los coeficientes Betas son significativos! Y el ser negativos habla de que hay menos homicidios en zonas donde hay mas proporción de viviendas con internet 
 head(out.sum_m1_poisson_log.sim)
-####### 
+
+####### Un incremento de una unidad de proporción de internet se traduce en una reducción de 22% en el conteo de homicidios
 exp(-1.2252)
+
 #DIC
 m1_poisson_log.dic<-m1_poisson_log.sim$DIC
 print(m1_poisson_log.dic) #8295
