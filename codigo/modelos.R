@@ -7,7 +7,7 @@ setwd(wdir)
 library(R2OpenBUGS)
 library(dplyr)
 library(readr)
-library(R2jags)
+library(coda)
 #--- Funciones utiles ---
 prob<-function(x){
   out<-min(length(x[x>0])/length(x),length(x[x<0])/length(x))
@@ -75,6 +75,43 @@ cor(tabla_4anios_ok[,c("POR_VPH_INTER","GRAPROES_1","PROM_OCUP")])
 tabla <- tabla_4anios_ok
 variables <- c("homi_count","POBTOT","PROM_OCUP","GRAPROES","POR_VPH_INTER")
 datos <- tabla %>% select(one_of(variables))
+######################################Se vale escalar las variables - dejo aqui el escalador por si queremos probar que pasa
+scale2 <- function(x) {
+  sdx <- sqrt(var(x))
+  meanx <- mean(x)
+  return((x - meanx)/sdx)
+}
+
+datos$POR_VPH_INTER <- scale2(datos$POR_VPH_INTER)
+############################################### GLM frecuentista
+datos <- datos[which(datos$POBTOT!=0),]
+coefini=coef(glm(homi_count ~ POR_VPH_INTER,  family = "poisson",data=tabla_4anios_ok))
+#Hacemos POBTOT+1 para no tener log(0)
+m.glm <- glm(homi_count ~ POR_VPH_INTER, offset=log(POBTOT+1), family = "poisson",data=datos)
+summary(m.glm)
+
+# Call:
+#   glm(formula = homi_count ~ POR_VPH_INTER, family = "poisson", 
+#       data = datos, offset = log(POBTOT + 1))
+# 
+# Deviance Residuals: 
+#   Min       1Q   Median       3Q      Max  
+# -3.3444  -1.1322  -0.4349   0.5132  19.3544  
+# 
+# Coefficients:
+#   Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)   -7.36907    0.03934 -187.30   <2e-16 ***
+#   POR_VPH_INTER -1.40469    0.10555  -13.31   <2e-16 ***
+#   ---
+#   Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# (Dispersion parameter for poisson family taken to be 1)
+# 
+# Null deviance: 4797.4  on 2410  degrees of freedom
+# Residual deviance: 4605.8  on 2409  degrees of freedom
+# AIC: 8370.3
+
+####################################Ahora si el GIBBS en OpenBUGS
 #-Defining data-
 n <- nrow(datos)*1
 #poisson y bin neg - exposure es el offset de POP_TOT
@@ -107,6 +144,9 @@ out_m1_poisson_log.sim<-m1_poisson_log.sim$sims.list
 
 # Con 5000 iteraciones las cadenas no se mezclan bien :(
 traceplot(m1_poisson_log.sim)
+plot(m1_poisson_log.sim)
+plot(as.mcmc(m1_poisson_log.sim))
+
 
 #Resumen (estimadores)
 #OpenBUGS
@@ -114,9 +154,13 @@ out.sum_m1_poisson_log.sim<-m1_poisson_log.sim$summary
 print(out.sum_m1_poisson_log.sim)
 ################## Claramente los coeficientes Betas son significativos! Y el ser negativos habla de que hay menos homicidios en zonas donde hay mas proporción de viviendas con internet 
 head(out.sum_m1_poisson_log.sim)
-
+# mean         sd   2.5%    25%    50%    75%  97.5%
+# beta[1]  -7.441926 0.03348326 -7.501 -7.467 -7.449 -7.416 -7.378
+# beta[2]  -1.225263 0.08206685 -1.379 -1.295 -1.205 -1.160 -1.097
+# ypred[1]  1.193778 1.08895583  0.000  0.000  1.000  2.000  4.000
+# ypred[2]  2.321111 1.55316213  0.000  1.000  2.000  3.000  6.000
 ####### Un incremento de una unidad de proporción de internet se traduce en una reducción de 22% en el conteo de homicidios
-exp(-1.2252)
+exp(-1.2252) # = 0.2936 si beta es > 0 la tasa es de crecimiento si beta < 0 la tasa es de decrecimiento
 
 #DIC
 m1_poisson_log.dic<-m1_poisson_log.sim$DIC
