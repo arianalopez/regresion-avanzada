@@ -53,14 +53,14 @@ cor(subdata1)
 # VPH_INTER    Viviendas Particulares con Internet
 
 #Transformamos las variables explicativas en %
-
-tabla_4anios_ok$POR_P_18YMAS <- tabla_4anios_ok$P_18YMAS/tabla_4anios_ok$POBTOT
-tabla_4anios_ok$POR_P18YM_PB <- tabla_4anios_ok$P18YM_PB/tabla_4anios_ok$POBTOT
-tabla_4anios_ok$POR_VPH_PISODT <- tabla_4anios_ok$VPH_PISODT/tabla_4anios_ok$VIVPAR_HAB
-tabla_4anios_ok$POR_VPH_TV <- tabla_4anios_ok$VPH_TV/tabla_4anios_ok$VIVPAR_HAB
-tabla_4anios_ok$POR_VPH_AUTOM <- tabla_4anios_ok$VPH_AUTOM/tabla_4anios_ok$VIVPAR_HAB
-tabla_4anios_ok$POR_VPH_PC <- tabla_4anios_ok$VPH_PC/tabla_4anios_ok$VIVPAR_HAB
-tabla_4anios_ok$POR_VPH_INTER <- tabla_4anios_ok$VPH_INTER/tabla_4anios_ok$VIVPAR_HAB
+########### El ifelse checa si el denominador es 0 y en ese caso pone 0 a la proporción
+tabla_4anios_ok$POR_P_18YMAS <- ifelse(tabla_4anios_ok$POBTOT==0,0,tabla_4anios_ok$P_18YMAS/tabla_4anios_ok$POBTOT)
+tabla_4anios_ok$POR_P18YM_PB <- ifelse(tabla_4anios_ok$POBTOT==0,0,tabla_4anios_ok$P18YM_PB/tabla_4anios_ok$POBTOT)
+tabla_4anios_ok$POR_VPH_PISODT <- ifelse(tabla_4anios_ok$VIVPAR_HAB==0,0,tabla_4anios_ok$VPH_PISODT/tabla_4anios_ok$VIVPAR_HAB)
+tabla_4anios_ok$POR_VPH_TV <- ifelse(tabla_4anios_ok$VIVPAR_HAB==0,0,tabla_4anios_ok$VPH_TV/tabla_4anios_ok$VIVPAR_HAB)
+tabla_4anios_ok$POR_VPH_AUTOM <- ifelse(tabla_4anios_ok$VIVPAR_HAB==0,0,tabla_4anios_ok$VPH_AUTOM/tabla_4anios_ok$VIVPAR_HAB)
+tabla_4anios_ok$POR_VPH_PC <- ifelse(tabla_4anios_ok$VIVPAR_HAB==0,0,tabla_4anios_ok$VPH_PC/tabla_4anios_ok$VIVPAR_HAB)
+tabla_4anios_ok$POR_VPH_INTER <- ifelse(tabla_4anios_ok$VIVPAR_HAB==0,0,tabla_4anios_ok$VPH_INTER/tabla_4anios_ok$VIVPAR_HAB)
 tabla_4anios_ok$GRAPROES_1 <- tabla_4anios_ok$GRAPROES
 
 #################################### PRIMER MODELO homi ~ Po(POR_VPH_INTER,beta)
