@@ -63,20 +63,25 @@ tabla_4anios_ok$POR_VPH_PC <- tabla_4anios_ok$VPH_PC/tabla_4anios_ok$VIVPAR_HAB
 tabla_4anios_ok$POR_VPH_INTER <- tabla_4anios_ok$VPH_INTER/tabla_4anios_ok$VIVPAR_HAB
 tabla_4anios_ok$GRAPROES_1 <- tabla_4anios_ok$GRAPROES
 
+#################################### PRIMER MODELO homi ~ Po(POR_VPH_INTER,beta)
+########################### Esta tecnica para seleccionar variables permite que el codigo despues se ppueda automatizar
+tabla <- tabla_4anios_ok
+variables <- c("homi_count","POBTOT","GRAPROES","POR_VPH_INTER")
+datos <- tabla %>% select(one_of(variables))
 #-Defining data-
 
-#poisson y bin neg
-data<-list("n"=n,"y"=tabla_4anios_ok$homi_count,"x"=tabla_4anios_ok$POR_VPH_INTER)
+#poisson y bin neg - exposure es el offset de POP_TOT
+data<-list("n"=n,"y"=datos[[1]],"exposure"=datos[[2]],"x"=datos[[4]])
 
 #binomial
 data<-list("n"=n,"ne"=tabla_4anios_ok$POBTOT,"y"=tabla_4anios_ok$prom_homi,"x"=tabla_4anios_ok$INDICE_GLOBAL)
 
 
 #-Defining inits-
-inits<-function(){list(beta=rep(1,2),yf1=rep(1,n))}
+inits<-function(){list(beta=rep(0,2),ypred=rep(1,n))}
 
 #-Selecting parameters to monitor-
-parameters<-c("beta","yf1")
+parameters<-c("beta","ypred")
 
 #-Running code-
 #OpenBUGS
