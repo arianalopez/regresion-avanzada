@@ -74,7 +74,7 @@ datos <- tabla %>% select(one_of(variables))
 data<-list("n"=n,"y"=datos[[1]],"exposure"=datos[[2]],"x"=datos[[4]])
 
 #binomial
-data<-list("n"=n,"ne"=tabla_4anios_ok$POBTOT,"y"=tabla_4anios_ok$prom_homi,"x"=tabla_4anios_ok$INDICE_GLOBAL)
+#data<-list("n"=n,"ne"=tabla_4anios_ok$POBTOT,"y"=tabla_4anios_ok$prom_homi,"x"=tabla_4anios_ok$INDICE_GLOBAL)
 
 
 #-Defining inits-
