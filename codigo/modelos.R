@@ -1,7 +1,7 @@
 #-Working directory-
 
-wdir<-"/home/denny/itam/modelos_lgeneralizados/ago_2016/proyecto_final"
-wdir<-"/home/stuka/RegresionAvanzada/ProyFin/Aquisetrabaja/regresion-avanzada/"
+wdir<-""
+wdir<-"/home/stuka/RegresionAvanzada/ProyFin/Aquisetrabaja/regresion-avanzada/codigo/"
 setwd(wdir)
 
 library(R2OpenBUGS)
@@ -13,9 +13,9 @@ prob<-function(x){
   out
 }
 
-tabla_4anios_ok <- read_csv("./datos/tabla_4anios_naive.csv")
+tabla_4anios_ok <- read_csv("../datos/tabla_4anios_naive.csv")
 #MODELO NAIVE
-n <- nrow(tabla_4anios_ok)*1
+
 hist(tabla_4anios_ok$homi_count,breaks = 30)
 summary(tabla_4anios_ok$homi_count)
 table(tabla_4anios_ok$homi_count)
@@ -69,7 +69,7 @@ tabla <- tabla_4anios_ok
 variables <- c("homi_count","POBTOT","GRAPROES","POR_VPH_INTER")
 datos <- tabla %>% select(one_of(variables))
 #-Defining data-
-
+n <- nrow(datos)*1
 #poisson y bin neg - exposure es el offset de POP_TOT
 data<-list("n"=n,"y"=datos[[1]],"exposure"=datos[[2]],"x"=datos[[4]])
 
@@ -85,7 +85,7 @@ parameters<-c("beta","ypred")
 
 #-Running code-
 #OpenBUGS
-m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="./codigo/m1_poisson_log.txt",
+m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="m1_poisson_log.txt",
                n.iter=20000,n.chains=1,n.burnin=2000)
 
 m1_poisson_lin.sim<-bugs(data,inits,parameters,model.file="m1_poisson_lineal.txt",
