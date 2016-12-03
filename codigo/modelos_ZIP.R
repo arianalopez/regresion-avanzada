@@ -399,20 +399,36 @@ m2_poisson_log.sim<-bugs(data,inits,parameters,model.file="m2_poisson_log.txt",
 #-Defining data-
 n <- nrow(datos)*1
 z <- rep(1,n)
+
 #poisson y bin neg - exposure es el offset de POP_TOT
-data<-list("n"=n,"y"=datos$homi_count,"exposure"=datos$POBTOT,"x"=datos$POR_VPH_AUTOM,"z"=z)
+data<-list("n"=n,"y"=datos$homi_count,"exposure"=datos$POBTOT,"x1"=datos$POR_VPH_AUTOM,"x2"=datos$PROM_OCUP,"z"=z)
 
 #-Defining inits-
 inits<-function(){list(beta=rep(0,2),gamma=rep(0,1),ypred=rep(1,n))}
 
 #-Selecting parameters to monitor-
-parameters<-c("beta","gamma","p","ypred")
+parameters<-c("beta","gamma","p","mu1","ypred")
 
 #-Running code-
 #OpenBUGS
-m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="m1_poisson_log_2covars.txt",
-                         n.iter=20000,n.chains=1,n.burnin=2000)
+m1_ZIPoisson_log_logit.sim<-bugs(data,inits,parameters,model.file="ZIPoisson.txt",
+                         n.iter=20000,n.chains=1,n.burnin=5000)
+
+out_m1_ZIPoisson_log_logit.sim<-m1_ZIPoisson_log_logit.sim$sims.list
+write_csv(out_m1_ZIPoisson_log_logit.sim,"m1_ZIPoisson_log_logit")
+#############################################################################################
+#Inicio del analisis Bayesiano
+
+# Con 5000 iteraciones las cadenas no se mezclan bien :(
+traceplot(m1_ZIPoisson_log_logit.sim)
+plot(m1_ZIPoisson_log_logit.sim)
 
 
+#Resumen (estimadores)
+#OpenBUGS
+out.sum_m1_ZIPoisson_log_logit.sim<-m1_ZIPoisson_log_logit.sim$summary
+print(out.sum_m1_ZIPoisson_log_logit.sim)
+################## Claramente los coeficientes Betas son significativos! Y el ser negativos habla de que hay menos homicidios en zonas donde hay mas proporción de viviendas con internet 
+head(out.sum_m1_ZIPoisson_log_logit.sim,6)
 
 
