@@ -7,7 +7,7 @@ setwd(wdir)
 library(R2OpenBUGS)
 library(dplyr)
 library(readr)
-library(coda)
+library(R2jags)
 #--- Funciones utiles ---
 prob<-function(x){
   out<-min(length(x[x>0])/length(x),length(x[x<0])/length(x))
@@ -69,11 +69,12 @@ plot(tabla_4anios_ok$homi_count,tabla_4anios_ok$POR_VPH_INTER,pch=19)
 plot(tabla_4anios_ok$homi_count,tabla_4anios_ok$GRAPROES_1,pch=19)
 plot(tabla_4anios_ok$homi_count,tabla_4anios_ok$PROM_OCUP,pch=19)
 
+write_csv(as_data_frame(cor(tabla_4anios_ok[,c(2,10,18:25)])),"../datos/corrs.csv")
 cor(tabla_4anios_ok[,c("POR_VPH_INTER","GRAPROES_1","PROM_OCUP")])
 #################################### PRIMER MODELO homi ~ Po(POR_VPH_INTER,beta)
 ########################### Esta tecnica para seleccionar variables permite que el codigo despues se ppueda automatizar
 tabla <- tabla_4anios_ok
-variables <- c("homi_count","POBTOT","PROM_OCUP","GRAPROES","POR_VPH_INTER")
+variables <- c("homi_count","POBTOT","PROM_OCUP","POR_VPH_PISODT","POR_VPH_AUTOM")
 datos <- tabla %>% select(one_of(variables))
 ######################################Se vale escalar las variables - dejo aqui el escalador por si queremos probar que pasa
 scale2 <- function(x) {
@@ -81,10 +82,12 @@ scale2 <- function(x) {
   meanx <- mean(x)
   return((x - meanx)/sdx)
 }
+#Se puede escalar
+#datos$POR_VPH_INTER <- scale2(datos$POR_VPH_INTER)
 
-datos$POR_VPH_INTER <- scale2(datos$POR_VPH_INTER)
+# Tiro las agebs con POBTOT = 0
+#datos <- datos[which(datos$POBTOT!=0),]
 ############################################### GLM frecuentista
-datos <- datos[which(datos$POBTOT!=0),]
 coefini=coef(glm(homi_count ~ POR_VPH_INTER,  family = "poisson",data=tabla_4anios_ok))
 #Hacemos POBTOT+1 para no tener log(0)
 m.glm <- glm(homi_count ~ POR_VPH_INTER, offset=log(POBTOT+1), family = "poisson",data=datos)
@@ -114,22 +117,18 @@ summary(m.glm)
 ####################################Ahora si el GIBBS en OpenBUGS
 #-Defining data-
 n <- nrow(datos)*1
-#poisson y bin neg - exposure es el offset de POP_TOT
-data<-list("n"=n,"y"=datos[[1]],"exposure"=datos[[2]],"x"=datos[[5]])
-
-#binomial
-#data<-list("n"=n,"ne"=tabla_4anios_ok$POBTOT,"y"=tabla_4anios_ok$prom_homi,"x"=tabla_4anios_ok$INDICE_GLOBAL)
-
+#poisson - exposure es el offset de POP_TOT
+data<-list("n"=n,"y"=datos$homi_count,"exposure"=datos$POBTOT,"x1"=datos$POR_VPH_AUTOM,"x2"=datos$PROM_OCUP)
 
 #-Defining inits-
-inits<-function(){list(beta=rep(0,2),ypred=rep(1,n))}
+inits<-function(){list(beta=rep(0,3),ypred=rep(1,n))}
 
 #-Selecting parameters to monitor-
 parameters<-c("beta","ypred")
 
 #-Running code-
 #OpenBUGS
-m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="m1_poisson_log.txt",
+m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="m1_poisson_log_2covars.txt",
                n.iter=20000,n.chains=1,n.burnin=2000)
 
 m1_poisson_lin.sim<-bugs(data,inits,parameters,model.file="m1_poisson_lineal.txt",
@@ -139,13 +138,13 @@ m1_poisson_lin.sim<-bugs(data,inits,parameters,model.file="m1_poisson_lineal.txt
 #RESPUESTAS MODELO 1 POISSON LIGA LOG
 #OpenBUGS
 out_m1_poisson_log.sim<-m1_poisson_log.sim$sims.list
+
 #############################################################################################
 #Inicio del analisis Bayesiano
 
 # Con 5000 iteraciones las cadenas no se mezclan bien :(
 traceplot(m1_poisson_log.sim)
 plot(m1_poisson_log.sim)
-plot(as.mcmc(m1_poisson_log.sim))
 
 
 #Resumen (estimadores)
@@ -154,31 +153,35 @@ out.sum_m1_poisson_log.sim<-m1_poisson_log.sim$summary
 print(out.sum_m1_poisson_log.sim)
 ################## Claramente los coeficientes Betas son significativos! Y el ser negativos habla de que hay menos homicidios en zonas donde hay mas proporción de viviendas con internet 
 head(out.sum_m1_poisson_log.sim)
-# mean         sd   2.5%    25%    50%    75%  97.5%
-# beta[1]  -7.441926 0.03348326 -7.501 -7.467 -7.449 -7.416 -7.378
-# beta[2]  -1.225263 0.08206685 -1.379 -1.295 -1.205 -1.160 -1.097
-# ypred[1]  1.193778 1.08895583  0.000  0.000  1.000  2.000  4.000
-# ypred[2]  2.321111 1.55316213  0.000  1.000  2.000  3.000  6.000
+# mean         sd    2.5%     25%     50%       75%   97.5%
+# beta[1]  -5.9425547 0.14531434 -6.2080 -6.0610 -5.9260 -5.836000 -5.6720
+# beta[2]  -2.2160482 0.13339709 -2.4620 -2.3170 -2.2330 -2.106000 -1.9760
+# beta[3]  -0.2696281 0.03194769 -0.3286 -0.2912 -0.2703 -0.246175 -0.2062
+# ypred[1]  0.8475000 0.92259413  0.0000  0.0000  1.0000  1.000000  3.0000
+# ypred[2]  2.6732222 1.64496874  0.0000  1.0000  2.0000  4.000000  6.0000
+# ypred[3]  1.7693889 1.33814806  0.0000  1.0000  2.0000  3.000000  5.0000
 ####### Un incremento de una unidad de proporción de internet se traduce en una reducción de 22% en el conteo de homicidios
 exp(-1.2252) # = 0.2936 si beta es > 0 la tasa es de crecimiento si beta < 0 la tasa es de decrecimiento
-
+exp(-1.2451)
 #DIC
 m1_poisson_log.dic<-m1_poisson_log.sim$DIC
 print(m1_poisson_log.dic) #8.4e+11
 
 ######################## Analisis MCMC para beta1
-z<-out_m1_poisson_log.sim$beta[,1]
+beta_num <- 1
+z<-out_m1_poisson_log.sim$beta[,beta_num]
 par(mfrow=c(2,2))
-plot(z,type="l")
-plot(cumsum(z)/(1:length(z)),type="l")
-hist(z,freq=FALSE)
-acf(z)
+plot(z,type="l",main="Mezcla de la cadena")
+plot(cumsum(z)/(1:length(z)),type="l",main="Gráfica del promedio ergódico")
+hist(z,freq=FALSE,main=paste0("Distribución final de beta ",beta_num))
+acf(z,main="Gráfica de autocorrelación")
 
 ############## p-value
 prob(z)
 
 ######################## Analisis MCMC para beta2
-z<-out_m1_poisson_log.sim$beta[,2]
+beta_num <- 2
+z<-out_m1_poisson_log.sim$beta[,beta_num]
 par(mfrow=c(2,2))
 plot(z,type="l")
 plot(cumsum(z)/(1:length(z)),type="l")
@@ -190,20 +193,30 @@ prob(z)
 ########################################## Predictions
 #Predictions
 out.ypred<-out.sum_m1_poisson_log.sim[grep("ypred",rownames(out.sum_m1_poisson_log.sim)),]
-or<-order(datos$POR_VPH_INTER)
+or<-order(datos$POR_VPH_AUTOM)
 ymin<-min(datos$homi_count,out.ypred[,c(1,3,7)])
 ymax<-max(datos$homi_count,out.ypred[,c(1,3,7)])
 par(mfrow=c(1,1))
-plot(datos$POR_VPH_INTER,datos$homi_count,ylim=c(ymin,ymax))
-lines(datos$POR_VPH_INTER[or],out.ypred[or,1],lwd=2,col=2)
-lines(datos$POR_VPH_INTER[or],out.ypred[or,3],lty=2,col=2)
-lines(datos$POR_VPH_INTER[or],out.ypred[or,7],lty=2,col=2)
+plot(datos$POR_VPH_AUTOM,datos$homi_count,ylim=c(ymin,ymax))
+lines(datos$POR_VPH_AUTOM[or],out.ypred[or,1],lwd=2,col=2)
+lines(datos$POR_VPH_AUTOM[or],out.ypred[or,3],lty=2,col=3)
+lines(datos$POR_VPH_AUTOM[or],out.ypred[or,7],lty=2,col=3)
 
 
+out.ypred<-out.sum_m1_poisson_log.sim[grep("ypred",rownames(out.sum_m1_poisson_log.sim)),]
+or<-order(datos$PROM_OCUP)
+ymin<-min(datos$homi_count,out.ypred[,c(1,3,7)])
+ymax<-max(datos$homi_count,out.ypred[,c(1,3,7)])
+par(mfrow=c(1,1))
+plot(datos$PROM_OCUP,datos$homi_count,ylim=c(ymin,ymax))
+lines(datos$PROM_OCUP[or],out.ypred[or,1],lwd=2,col=2)
+lines(datos$PROM_OCUP[or],out.ypred[or,3],lty=2,col=3)
+lines(datos$PROM_OCUP[or],out.ypred[or,7],lty=2,col=3)
+
+plot(datos$homi_count,out.ypred[,1])
 ##########################################################################################
 # Hasta aqui mis avances - falta la pseudo-R
-
-
+cor(datos$homi_count,out.ypred[,1])
 
 
 #RESPUESTAS MODELO 1 POISSON LIGA LINEAL
@@ -258,9 +271,18 @@ m2_poisson_log.sim<-bugs(data,inits,parameters,model.file="m2_poisson_log.txt",
 n <- nrow(datos)*1
 z <- rep(1,n)
 #poisson y bin neg - exposure es el offset de POP_TOT
-data<-list("n"=n,"y"=datos$homi_count,"exposure"=datos$POBTOT,"x"=datos$POR_VPH_INTER,"z"=)
+data<-list("n"=n,"y"=datos$homi_count,"exposure"=datos$POBTOT,"x"=datos$POR_VPH_AUTOM,"z"=z)
 
+#-Defining inits-
+inits<-function(){list(beta=rep(0,2),gamma=rep(0,1),ypred=rep(1,n))}
 
+#-Selecting parameters to monitor-
+parameters<-c("beta","gamma","p","ypred")
+
+#-Running code-
+#OpenBUGS
+m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="m1_poisson_log_2covars.txt",
+                         n.iter=20000,n.chains=1,n.burnin=2000)
 
 
 

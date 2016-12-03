@@ -4,44 +4,12 @@ model {
     
     y[i] ~ dpois(mu2[i])
     
-    mu2[i] <- mu1[i]*POPULATION[i]
-    mu1[i] <- mu[i]*I[i] + 0.00001
+    mu2[i] <- mu1[i]*exposure[i]
+    mu1[i] <- eta[i]*I[i] + 0.00001
     
     I[i] ~ dbern(p[i])
     logit(p[i]) <- theta[i]
     
-    mu[i] <- covars de proceso poissonbla + bla +bla + ....
-    theta[i] <- covars de proceso de reporteobla + bla + bla + ....
+    log(eta[i]) <- beta[1] + beta[2]*x[i]
+    theta[i] <- gamma[1]*z[i]
   }
-  
-  
-#######################################################################################
-  
-  
-  C <- 10000 #Constant 1/0 trick
-  
-  # Likelihood:
-  for ( i in 1:ny ) {
-    
-    #Likelihood of the count model component
-    LikCountModel[i] <- pow(mu[i],y[i])/y_fact[i]*exp(-mu[i])
-    
-    #Count model component
-    eta[i] <- bet0 + inprod( beta[] , B[i,] )
-    mu[i] <- exp(eta[i])
-    
-    #ZI Component
-    zeta[i] <- gamm0 + inprod( gamma[] , G[i,] )
-    w[i] <- exp(zeta[i])/(1+exp(zeta[i]))
-    
-    #1/0 Tricks: ones is a column containing only ones, with the same size of y
-    p[i] <- L[i] / C
-    ones[i] ~ dbern(p[i])
-    
-    #Full likelihood expression
-    L[i] <- LikCountModel[i] * (1-w[i]) + equals(y[i],0)*w[i]
-  }
-  
-  #then set your priors for all beta and gamma
-  
-  
