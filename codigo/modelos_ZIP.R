@@ -130,7 +130,7 @@ parameters<-c("beta","ypred")
 #-Running code-
 #OpenBUGS
 m1_poisson_log.sim<-bugs(data,inits,parameters,model.file="m1_poisson_log.txt",
-               n.iter=5000,n.chains=1,n.burnin=500)
+               n.iter=20000,n.chains=1,n.burnin=2000)
 
 m1_poisson_lin.sim<-bugs(data,inits,parameters,model.file="m1_poisson_lineal.txt",
                          n.iter=20000,n.chains=1,n.burnin=2000)
@@ -256,8 +256,9 @@ m2_poisson_log.sim<-bugs(data,inits,parameters,model.file="m2_poisson_log.txt",
 ####################  Modelos Zero-Inflated Poisson
 #-Defining data-
 n <- nrow(datos)*1
+z <- rep(1,n)
 #poisson y bin neg - exposure es el offset de POP_TOT
-data<-list("n"=n,"y"=datos[[1]],"exposure"=datos[[2]],"x"=datos[[5]])
+data<-list("n"=n,"y"=datos$homi_count,"exposure"=datos$POBTOT,"x"=datos$POR_VPH_INTER,"z"=)
 
 
 
