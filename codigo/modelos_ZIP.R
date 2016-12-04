@@ -415,7 +415,7 @@ m1_ZIPoisson_log_logit.sim<-bugs(data,inits,parameters,model.file="ZIPoisson.txt
                          n.iter=20000,n.chains=1,n.burnin=5000)
 
 out_m1_ZIPoisson_log_logit.sim<-m1_ZIPoisson_log_logit.sim$sims.list
-write_csv(out_m1_ZIPoisson_log_logit.sim,"m1_ZIPoisson_log_logit")
+write_csv(as_data_frame(out_m1_ZIPoisson_log_logit.sim),"m1_ZIPoisson_log_logit.csv")
 #############################################################################################
 #Inicio del analisis Bayesiano
 
@@ -428,7 +428,102 @@ plot(m1_ZIPoisson_log_logit.sim)
 #OpenBUGS
 out.sum_m1_ZIPoisson_log_logit.sim<-m1_ZIPoisson_log_logit.sim$summary
 print(out.sum_m1_ZIPoisson_log_logit.sim)
+write_csv(as_data_frame(out.sum_m1_ZIPoisson_log_logit.sim),"m1_ZIPoisson_log_logit.csv")
 ################## Claramente los coeficientes Betas son significativos! Y el ser negativos habla de que hay menos homicidios en zonas donde hay mas proporción de viviendas con internet 
 head(out.sum_m1_ZIPoisson_log_logit.sim,6)
+
+m1_ZIPoisson_log_logit.dic<-m1_ZIPoisson_log_logit.sim$DIC
+print(m1_ZIPoisson_log_logit.dic) #8.4e+11
+
+######################## Analisis MCMC para beta1
+beta_num <- 1
+z<-out_m1_ZIPoisson_log_logit.sim$p[,1]
+par(mfrow=c(2,2))
+plot(z,type="l",main="Mezcla de la cadena")
+plot(cumsum(z)/(1:length(z)),type="l",main="Gráfica del promedio ergódico")
+hist(z,freq=FALSE,main=paste0("Distribución final de P ",""))
+acf(z,main="Gráfica de autocorrelación")
+
+############## p-value
+prob(z)
+
+######################## Analisis MCMC para beta2
+beta_num <- 2
+z<-out_m1_poisson_log.sim$beta[,beta_num]
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+############### p-value
+prob(z)
+
+######################## Analisis MCMC para beta2
+beta_num <- 3
+z<-out_m1_poisson_log.sim$beta[,beta_num]
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+############### p-value
+prob(z)
+
+
+########################################## Predictions
+#Predictions
+out.ypred<-out.sum_m1_ZIPoisson_log_logit.sim[grep("ypred",rownames(out.sum_m1_ZIPoisson_log_logit.sim)),]
+or<-order(datos$POR_VPH_AUTOM)
+ymin<-min(datos$homi_count,out.ypred[,c(1,3,7)])
+ymax<-max(datos$homi_count,out.ypred[,c(1,3,7)])
+par(mfrow=c(1,1))
+plot(datos$POR_VPH_AUTOM,datos$homi_count,ylim=c(ymin,ymax))
+lines(datos$POR_VPH_AUTOM[or],out.ypred[or,1],lwd=2,col=2)
+lines(datos$POR_VPH_AUTOM[or],out.ypred[or,3],lty=2,col=3)
+lines(datos$POR_VPH_AUTOM[or],out.ypred[or,7],lty=2,col=3)
+
+
+out.ypred<-out.sum_m1_poisson_log.sim[grep("ypred",rownames(out.sum_m1_poisson_log.sim)),]
+or<-order(datos$PROM_OCUP)
+ymin<-min(datos$homi_count,out.ypred[,c(1,3,7)])
+ymax<-max(datos$homi_count,out.ypred[,c(1,3,7)])
+par(mfrow=c(1,1))
+plot(datos$PROM_OCUP,datos$homi_count,ylim=c(ymin,ymax))
+lines(datos$PROM_OCUP[or],out.ypred[or,1],lwd=2,col=2)
+lines(datos$PROM_OCUP[or],out.ypred[or,3],lty=2,col=3)
+lines(datos$PROM_OCUP[or],out.ypred[or,7],lty=2,col=3)
+
+plot(datos$homi_count,out.ypred[,1])
+##########################################################################################
+# Hasta aqui mis avances - falta la pseudo-R
+cor(datos$homi_count,out.ypred[,1])
+
+##################################################################################
+tabla <- read_csv("../datos/tabla_4anios_mods.csv")
+tabla$POR_VPH_PISODT <- ifelse(tabla$VIVPAR_HAB==0,0,tabla$VPH_PISODT/tabla$VIVPAR_HAB)
+tabla$POR_VPH_AUTOM <- ifelse(tabla$VIVPAR_HAB==0,0,tabla$VPH_AUTOM/tabla$VIVPAR_HAB)
+names(tabla)
+variables <- c("homi_count","POBTOT","PROM_OCUP","POR_VPH_PISODT","POR_VPH_AUTOM","bin_ab","bin_af")
+datos <- tabla %>% select(one_of(variables))
+datos$bin_ab <- as.integer(datos$bin_ab)
+datos$bin_af <- as.integer(datos$bin_af)
+#-Defining data-
+n <- nrow(datos)*1
+z <- rep(1,n)
+
+#poisson y bin neg - exposure es el offset de POP_TOT
+data<-list("n"=n,"y"=datos$homi_count,"exposure"=datos$POBTOT,"x1"=datos$bin_ab,"x2"=datos$bin_af,"z"=z)
+
+#-Defining inits-
+inits<-function(){list(beta=rep(0,2),gamma=rep(0,1),ypred=rep(1,n))}
+
+#-Selecting parameters to monitor-
+parameters<-c("beta","gamma","p","mu1","ypred")
+
+#-Running code-
+#OpenBUGS
+m1_ZIPoisson_log_logit.sim<-bugs(data,inits,parameters,model.file="ZIPoisson.txt",
+                                 n.iter=20000,n.chains=1,n.burnin=5000)
+
 
 
