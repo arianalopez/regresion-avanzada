@@ -1,0 +1,24 @@
+##### Zero Inflated Poisson
+model {
+  for (i in 1:n) {
+#Likelihood    
+    y[i] ~ dpois(mu2[i])
+    
+    mu2[i] <- mu1[i]*exposure[i]
+    mu1[i] <- eta[i]*I[i] + 0.00001
+    
+    I[i] ~ dbern(p[i])
+    logit(p[i]) <- theta[i]
+    
+    log(eta[i]) <- beta[1] + beta[2]*x1[i]
+    theta[i] <- gamma[1] + gamma[2]*z1[i]
+  }
+  #####Priors
+  #######Poisson
+  for(j in 1:2) { beta[j] ~ dnorm(0,0.001) }
+  #######Bernouilli
+  for(k in 1:2) { gamma[k] ~ dnorm(0,0.001) }
+  #Prediction 1
+  #Poisson
+  for(i in 1:n) { ypred[i] ~ dpois(mu2[i]) }
+}
